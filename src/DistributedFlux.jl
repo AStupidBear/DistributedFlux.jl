@@ -5,9 +5,10 @@ using TensorBoardLogger, Logging
 using ProgressMeter: next!, Progress
 using Flux.Optimise: Params, @progress, runall, batchmemaybe, StopException, update!
 
-bcast!(xs) = MPI.Bcast!(x, 0, MPI.COMM_WORLD)
+bcast!(x) = MPI.Initialized() ? MPI.Bcast!(x, 0, MPI.COMM_WORLD) : x
 
-function allreduce!(xs)
+function allreduce!(x)
+    MPI.Initialized() || return x
     x′ = zero(x)
     MPI.Allreduce!(x, x′, MPI.SUM, MPI.COMM_WORLD)
     x .= x′ ./ MPI.Comm_size(MPI.COMM_WORLD)
@@ -16,7 +17,7 @@ end
 unwrap(x) = hasproperty(x, :data) ? x.data : x
 
 function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb = () -> (), logger = TBLogger(), verbose = false)
-    foreach(bcast!, ps)
+    foreach(bcast! ∘ unwrap, ps)
     ps = Params(ps)
     cb = runall(cb)
     l̄ = 0f0
