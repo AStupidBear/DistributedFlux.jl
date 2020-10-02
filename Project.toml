@@ -12,6 +12,7 @@ TensorBoardLogger = "899adc3e-224a-11e9-021f-63837185c80f"
 
 [compat]
 ProgressMeter = "1.4"
+TensorBoardLogger = "0.1"
 julia = "1"
 
 [extras]
