@@ -29,7 +29,7 @@ function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb = () -> (
             gs = gradient(ps) do
                 l = loss(batchmemaybe(d)...)
             end
-            foreach(allreduce! ∘ unwrap, gs)
+            foreach(allreduce! ∘ unwrap, values(gs.grads))
             update!(opt, ps, gs)
             l̄ = ((n - 1) * l̄ + l) / n
             if verbose
