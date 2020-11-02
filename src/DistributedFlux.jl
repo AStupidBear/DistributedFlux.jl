@@ -5,6 +5,8 @@ using TensorBoardLogger, Logging
 using ProgressMeter: next!, Progress
 using Flux.Optimise: Params, @progress, runall, batchmemaybe, StopException, update!
 
+include("functor.jl")
+
 bcast!(x) = MPI.Initialized() ? MPI.Bcast!(x, 0, MPI.COMM_WORLD) : x
 
 function allreduce!(x)
