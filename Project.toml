@@ -11,8 +11,8 @@ ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 TensorBoardLogger = "899adc3e-224a-11e9-021f-63837185c80f"
 
 [compat]
-MPI = "0.15"
 Flux = "0.11"
+MPI = "0.15"
 ProgressMeter = "1.4"
 TensorBoardLogger = "0.1"
 julia = "1"

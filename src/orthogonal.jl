@@ -2,6 +2,8 @@ using LinearAlgebra: qr, diagm, diag
 using Flux: glorot_uniform, gate, zeros, @functor 
 import Flux: RNNCell, LSTMCell, GRUCell, hidden, Recur
 
+export orthogonal
+
 RNNCell(in::Integer, out::Integer, σ = tanh; init = glorot_uniform, kernel_init = glorot_uniform) =
   RNNCell(σ, init(out, in), glorot_uniform(out, out), init(out), zeros(out))
 
