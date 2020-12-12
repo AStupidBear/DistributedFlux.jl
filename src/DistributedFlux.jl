@@ -6,6 +6,7 @@ using ProgressMeter: next!, Progress
 using Flux.Optimise: Params, @progress, runall, batchmemaybe, StopException, update!
 
 include("functor.jl")
+include("orthogonal.jl")
 
 bcast!(x) = MPI.Initialized() ? MPI.Bcast!(x, 0, MPI.COMM_WORLD) : x
 
