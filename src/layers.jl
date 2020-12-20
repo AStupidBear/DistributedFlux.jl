@@ -29,33 +29,52 @@ Flux.@functor Concatenate
 call(f, x) = f(x)
 
 function (m::Concatenate)(xs)
-    if m.dims == 1
-        reduce(vcat, call.(m.fs, xs))
-    elseif m.dims == 2
-        reduce(hcat, call.(m.fs, xs))
+    if xs isa Tuple
+        ys = [f(x) for (f, x) in zip(m.fs, xs)]
     else
-        cat(call.(m.fs, xs)...; m.dims)
+        ys = [f(xs) for f in m.fs]
+    end
+    if m.dims == 1
+        reduce(vcat, ys)
+    elseif m.dims == 2
+        reduce(hcat, ys)
+    else
+        cat(ys...; dims = m.dims)
     end
 end
 
-function CausalMeanPool(k)
-    Chain(
-        x -> add_padding(x, k .- 1),
-        MeanPool(k, stride = one.(k)),
-        function (x)
-            λ = prod(k) ./ Float32[prod(I.I) for I in CartesianIndices(k)]
-            λ = Flux.CUDA.Adapt.adapt(typeof(x), λ)
-            λ .* x[UnitRange.(1, k .- 1)..., :, :];
-            x[UnitRange.(k, size(x, 1))..., :, :]
-        end
-    )
+mutable struct LeftPad{N}
+    pad::NTuple{N, Int}
 end
 
-CausalMaxPool(k) = Chain(x -> add_padding(x, k .- 1), MaxPool(k, stride = one.(k)))
-CausalMinPool(k) = Chain(x -> -add_padding(x, k .- 1), MaxPool(k, stride = one.(k)), x -> -x)
+(m::LeftPad)(x) = add_padding(x, Tuple(reduce(vcat, collect.(zip(m.pad, zero.(m.pad))))))
+
+mutable struct RightPad{N}
+    pad::NTuple{N, Int}
+end
+
+(m::RightPad)(x) = add_padding(x, Tuple(reduce(vcat, collect.(zip(zero.(m.pad), m.pad)))))
 
 mutable struct Permute{N}
     dims::NTuple{N, Int}
 end
 
 (m::Permute)(x) = permutedims(x, m.dims)
+
+function CausalMeanPool(k)
+    Chain(
+        LeftPad(k .- 1),
+        MeanPool(k, stride = one.(k)),
+        function (x)
+            λmax = prod(k)
+            k = min.(k, size(x)[1:length(k)])
+            λ = λmax ./ Float32[prod(I.I) for I in CartesianIndices(k)]
+            λ = Flux.CUDA.Adapt.adapt(typeof(x), λ)
+            [λ .* x[UnitRange.(1, k)..., :, :];
+            x[UnitRange.(k .+ 1, size(x, 1))..., :, :]]
+        end
+    )
+end
+
+CausalMaxPool(k) = Chain(LeftPad(k .- 1), MaxPool(k, stride = one.(k)))
+CausalMinPool(k) = Chain(LeftPad(k .- 1), x -> -x, MaxPool(k, stride = one.(k)), x -> -x)
