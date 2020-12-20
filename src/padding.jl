@@ -45,22 +45,18 @@ end
 macro fixpad(ex)
   var = filter(x -> x isa Symbol, ex.args)[2]
   pad = nothing
-  ex_raw = deepcopy(ex)
   for ex′ in ex.args[2].args
     if ex′ isa Expr && ex′.head == :kw && ex′.args[1] == :padding
       pad = ex′.args[2]
-      ex′.args[2] = :(zero.($pad))
+      ex′.args[2] = :(needpad ? zero.($pad) : $pad)
       break
     end
   end
   isnothing(pad) && return esc(ex)
   quote
-    if need_manual_padding($var, $pad)
-      $var = add_padding($var, $pad)
-      $ex
-    else
-      $ex_raw
-    end
+    needpad = need_manual_padding($var, $pad)
+    $var = needpad ? add_padding($var, $pad) : $var
+    $ex
   end |> esc
 end
 
