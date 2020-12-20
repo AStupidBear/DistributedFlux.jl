@@ -8,6 +8,7 @@ using Flux.Optimise: Params, @progress, runall, batchmemaybe, StopException, upd
 include("functor.jl")
 include("orthogonal.jl")
 include("padding.jl")
+include("layers.jl")
 
 bcast!(x) = MPI.Initialized() ? MPI.Bcast!(x, 0, MPI.COMM_WORLD) : x
 
