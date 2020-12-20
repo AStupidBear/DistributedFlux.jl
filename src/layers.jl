@@ -1,4 +1,4 @@
-export Add, Activation, Concatenate
+export Add, Activation, Concatenate, Permute
 export CausalMeanPool, CausalMaxPool, CausalMinPool
 
 mutable struct Add{F}
@@ -9,13 +9,13 @@ Add(fs...) = Add(fs)
 
 Flux.@functor Add
 
-(m::Add)(x) = .+(fs.(x)...)
+(m::Add)(x) = .+(m.fs.(x)...)
 
 mutable struct Activation{F}
     f::F
 end
 
-(m::Activation)(x) = f.(x)
+(m::Activation)(x) = m.f.(x)
 
 mutable struct Concatenate{F}
     fs::F
@@ -24,15 +24,17 @@ end
 
 Concatenate(fs...; dims = 1) = Concatenate(fs, dims)
 
-Flux.@functor Concatenate (fs,)
+Flux.@functor Concatenate
 
-function (m::Concatenate)(x)
-    if dims == 1
-        reduce(vcat, fs.(x))
-    elseif dims == 2
-        reduce(hcat, fs.(x))
+call(f, x) = f(x)
+
+function (m::Concatenate)(xs)
+    if m.dims == 1
+        reduce(vcat, call.(m.fs, xs))
+    elseif m.dims == 2
+        reduce(hcat, call.(m.fs, xs))
     else
-        cat(fs.(x)...; dims)
+        cat(call.(m.fs, xs)...; m.dims)
     end
 end
 
@@ -51,3 +53,9 @@ end
 
 CausalMaxPool(k) = Chain(x -> add_padding(x, k .- 1), MaxPool(k, stride = one.(k)))
 CausalMinPool(k) = Chain(x -> -add_padding(x, k .- 1), MaxPool(k, stride = one.(k)), x -> -x)
+
+mutable struct Permute{N}
+    dims::NTuple{N, Int}
+end
+
+(m::Permute)(x) = permutedims(x, m.dims)
