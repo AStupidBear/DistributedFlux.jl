@@ -16,7 +16,7 @@ function calc_padding(lt, pad::CausalPad, k::NTuple{N,T}, dilation, stride) wher
   return Tuple(mapfoldl(i -> [i, 0], vcat, pad_amt))
 end
 
-need_manual_padding(x, pad) = x isa CUDA.CuArray && pad[1:2:end] != pad[2:2:end]
+need_manual_padding(x, pad) = x isa Flux.CUDA.CuArray && pad[1:2:end] != pad[2:2:end]
 
 @nograd need_manual_padding
 
@@ -45,7 +45,8 @@ end
 macro fixpad(ex)
   var = filter(x -> x isa Symbol, ex.args)[2]
   pad = nothing
-  for ex′ in  ex.args[2].args
+  ex_raw = deepcopy(ex)
+  for ex′ in ex.args[2].args
     if ex′ isa Expr && ex′.head == :kw && ex′.args[1] == :padding
       pad = ex′.args[2]
       ex′.args[2] = :(zero.($pad))
@@ -53,7 +54,14 @@ macro fixpad(ex)
     end
   end
   isnothing(pad) && return esc(ex)
-  esc(:($var = add_padding($var, $pad); $ex))
+  quote
+    if need_manual_padding($var, $pad)
+      $var = add_padding($var, $pad)
+      $ex
+    else
+      $ex_raw
+    end
+  end |> esc
 end
 
 ################################################################################
