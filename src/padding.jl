@@ -16,7 +16,7 @@ function calc_padding(lt, pad::CausalPad, k::NTuple{N,T}, dilation, stride) wher
   return Tuple(mapfoldl(i -> [i, 0], vcat, pad_amt))
 end
 
-need_manual_padding(x, pad) = x isa Flux.CUDA.CuArray && pad[1:2:end] != pad[2:2:end]
+need_manual_padding(x, pad) = unwrap(x) isa Flux.CUDA.CuArray && pad[1:2:end] != pad[2:2:end]
 
 @nograd need_manual_padding
 
