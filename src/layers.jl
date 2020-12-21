@@ -61,20 +61,17 @@ end
 
 (m::Permute)(x) = permutedims(x, m.dims)
 
-function CausalMeanPool(k)
-    Chain(
-        LeftPad(k .- 1),
-        MeanPool(k, stride = one.(k)),
-        function (x)
-            λmax = prod(k)
-            k = min.(k, size(x)[1:length(k)])
-            λ = λmax ./ Float32[prod(I.I) for I in CartesianIndices(k)]
-            λ = Flux.CUDA.Adapt.adapt(typeof(x), λ)
-            [λ .* x[UnitRange.(1, k)..., :, :];
-            x[UnitRange.(k .+ 1, size(x, 1))..., :, :]]
-        end
-    )
+mutable struct FixPoolEdge{N}
+    k::NTuple{N, Int}
 end
 
+function (m::FixPoolEdge)(x)
+    k = min.(m.k, size(x)[1:length(m.k)])
+    λ = prod(m.k) ./ Float32[prod(I.I) for I in CartesianIndices(k)]
+    λ = Flux.CUDA.Adapt.adapt(typeof(unwrap(x)), λ)
+    [λ .* x[UnitRange.(1, k)..., :, :]; x[UnitRange.(k .+ 1, size(x, 1))..., :, :]]
+end
+
+CausalMeanPool(k) = Chain(LeftPad(k .- 1), MeanPool(k, stride = one.(k)), FixPoolEdge(k))
 CausalMaxPool(k) = Chain(LeftPad(k .- 1), MaxPool(k, stride = one.(k)))
 CausalMinPool(k) = Chain(LeftPad(k .- 1), x -> -x, MaxPool(k, stride = one.(k)), x -> -x)
