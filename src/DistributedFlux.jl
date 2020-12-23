@@ -21,6 +21,12 @@ end
 
 unwrap(x) = hasproperty(x, :data) ? x.data : x
 
+function allreduce!(xs, gs)
+    for x in xs
+        allreduce!(gs[x])
+    end
+end
+
 function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb = () -> (), logger = TBLogger(), verbose = false)
     foreach(bcast! ∘ unwrap, ps)
     ps = Params(ps)
@@ -34,7 +40,7 @@ function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb = () -> (
             gs = gradient(ps) do
                 l = loss(batchmemaybe(d)...)
             end
-            foreach(allreduce! ∘ unwrap, values(gs.grads))
+            allreduce!(ps, gs)
             update!(opt, ps, gs)
             l̄ = ((n - 1) * l̄ + l) / n
             if verbose
