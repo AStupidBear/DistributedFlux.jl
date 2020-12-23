@@ -1,7 +1,7 @@
 name = "DistributedFlux"
 uuid = "aba3b622-f073-4b1a-a80e-2bbc9a109999"
 authors = ["Yao Lu <luyaocns@gmail.com> and contributors"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
