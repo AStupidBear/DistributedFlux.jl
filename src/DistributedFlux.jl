@@ -27,8 +27,8 @@ function allreduce!(xs, gs)
     end
 end
 
-function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb = () -> (), logger = TBLogger(), verbose = false)
-    foreach(bcast! ∘ unwrap, ps)
+function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb = () -> (), logger = TBLogger(), verbose = false, sync = false)
+    sync && foreach(bcast! ∘ unwrap, ps)
     ps = Params(ps)
     cb = runall(cb)
     l̄ = 0f0
@@ -40,7 +40,7 @@ function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb = () -> (
             gs = gradient(ps) do
                 l = loss(batchmemaybe(d)...)
             end
-            allreduce!(ps, gs)
+            sync && allreduce!(ps, gs)
             update!(opt, ps, gs)
             l̄ = ((n - 1) * l̄ + l) / n
             if verbose

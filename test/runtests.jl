@@ -20,7 +20,8 @@ using Flux, DistributedFlux, MPI
     MPI.Init()
 
     data = Flux.Data.DataLoader((x, y), batchsize = 4)
-    Flux.train!(loss, ps, data, opt, verbose = true)
+    Flux.train!(loss, ps, data, opt, verbose = true, sync = true)
+    Flux.train!(loss, ps, data, opt, verbose = true, sync = false)
 
     MPI.Finalize()
 end
