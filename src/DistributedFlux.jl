@@ -23,7 +23,7 @@ unwrap(x) = hasproperty(x, :data) ? x.data : x
 
 function allreduce!(xs, gs)
     for x in xs
-        allreduce!(gs[x])
+        allreduce!(unwrap(gs[x]))
     end
 end
 
