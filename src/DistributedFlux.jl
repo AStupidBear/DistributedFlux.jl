@@ -55,7 +55,7 @@ function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb_step = x 
                     @info "train" loss=l avgloss=l̄
                 end
             end
-            cb_step((loss = l, avgloss = l̄))
+            cb_step((step = n, loss = l, avgloss = l̄))
         catch ex
             if ex isa StopException
                 break
