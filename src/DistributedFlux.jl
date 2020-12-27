@@ -3,12 +3,16 @@ module DistributedFlux
 using Flux, MPI
 using TensorBoardLogger, Logging
 using ProgressMeter: next!, Progress
-using Flux.Optimise: Params, @progress, runall, batchmemaybe, StopException, update!
+using Flux.Optimise: Params, @progress, batchmemaybe, StopException, update!
 
 include("functor.jl")
 include("orthogonal.jl")
 include("padding.jl")
 include("layers.jl")
+
+call(f, xs...) = f(xs...)
+runall(f) = f
+runall(fs::AbstractVector) = x -> foreach(call, fs, x)
 
 bcast!(x) = MPI.Initialized() ? MPI.Bcast!(x, 0, MPI.COMM_WORLD) : x
 
@@ -27,10 +31,11 @@ function allreduce!(xs, gs)
     end
 end
 
-function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb = () -> (), logger = TBLogger(), verbose = false, sync = false)
+function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb_step = x -> (), cb_epoch = x -> (), logger = TBLogger(), verbose = false, sync = false)
     sync && foreach(bcast! ∘ unwrap, ps)
     ps = Params(ps)
-    cb = runall(cb)
+    cb_step = runall(cb_step)
+    cb_epoch = runall(cb_epoch)
     l̄ = 0f0
     ndata = length(data)
     prog = Progress(ndata)
@@ -50,7 +55,7 @@ function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb = () -> (
                     @info "train" loss=l avgloss=l̄
                 end
             end
-            cb()
+            cb_step((loss = l, avgloss = l̄))
         catch ex
             if ex isa StopException
                 break
@@ -59,6 +64,7 @@ function Flux.train!(loss, ps, data, opt, gradient = Flux.gradient; cb = () -> (
             end
         end
     end
+    cb_epoch((avgloss = l̄,))
     return l̄
 end
 
